@@ -1,5 +1,5 @@
 FROM python:3
-MAINTAINER Ram Durairajan "noemail@website.domain"
+LABEL "Jack Abram"="jabram@uoregon.edu"
 RUN apt-get update -y
 RUN apt-get install -y python3-pip python-dev build-essential
 COPY . /app

@@ -122,22 +122,52 @@
   // fill in open and close times in a human-readable format.
   // (If we want to also keep the ISO-formatted times, we'll need to
   // stash them in hidden fields.) 
+  // Show an ISO time in its own offset, not the browser's time zone.
+  // (moment 2.15's parseZone mishandles "+00:00", so set the offset.)
+  function format_time(iso) {
+    return moment(iso).utcOffset(iso.slice(-6)).format("ddd M/D H:mm");
+  }
+
   function calc_times(control) {
     var km = control.find("input[name='km']").val();
     var open_time_field = control.find("input[name='open']");
     var close_time_field = control.find("input[name='close']");
-    
-    $.getJSON(TIME_CALC_URL, { km: km }, 
+    var notes = control.find(".notes");
+
+    if ($.trim(km) === "") {
+      open_time_field.val("");
+      close_time_field.val("");
+      notes.text("");
+      return;
+    }
+
+    $.getJSON(TIME_CALC_URL, {
+        km: km,
+        brevet_dist_km: $("#brevet_dist_km").val(),
+        begin_date: $("#begin_date").val(),
+        begin_time: $("#begin_time").val()
+      },
       // response handler
       function(data) {
+         if (data.error) {
+           open_time_field.val("");
+           close_time_field.val("");
+           notes.text(data.error);
+           return;
+         }
          var times = data.result;
-         console.log("Got a response: " +  times);
          console.log("Response.open = " + times.open);
-         open_time_field.val( moment(times.open).format("ddd M/D H:mm"));
-         close_time_field.val( moment(times.close).format("ddd M/D H:mm"));
+         open_time_field.val(format_time(times.open));
+         close_time_field.val(format_time(times.close));
+         notes.text("");
        } // end of handler function
      );// End of getJSON
     }
+
+  // Recalculate every row that has a distance (after brevet/start change)
+  function recalc_all() {
+    $(".control").each(function() { calc_times($(this)); });
+  }
 
   $(document).ready(function(){
    // Do the following when the page is finished loading
@@ -145,7 +175,7 @@
       $('input[name="miles"]').change(
          function() {
              var miles = parseFloat($(this).val());
-             var km = (1.609344 * miles).toFixed(1) ;
+             var km = isNaN(miles) ? "" : (1.609344 * miles).toFixed(1) ;
              console.log("Converted " + miles + " miles to " + km + " kilometers");
              var control_entry = $(this).parents(".control")
              var target = control_entry.find("input[name='km']");
@@ -157,7 +187,7 @@
       $('input[name="km"]').change(
          function() {
              var km = parseFloat($(this).val());
-             var miles = (0.621371 * km).toFixed(1) ;
+             var miles = isNaN(km) ? "" : (0.621371 * km).toFixed(1) ;
              console.log("Converted " + km + " km to " + miles + " miles");
              var control_entry = $(this).parents(".control")
              var target = control_entry.find("input[name='miles']");
@@ -165,6 +195,8 @@
              // Then calculate times for this entry
              calc_times(control_entry);
           });
+
+      $("#brevet_dist_km, #begin_date, #begin_time").change(recalc_all);
 
      });   // end of what we do on document ready
 

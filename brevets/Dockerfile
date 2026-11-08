@@ -1,9 +1,10 @@
-FROM python:3
+# Python 3.9 is the newest version the `nose` test runner supports.
+FROM python:3.9-slim
 LABEL "Jack Abram"="jabram@uoregon.edu"
-RUN apt-get update -y
-RUN apt-get install -y python3-pip python-dev build-essential
-COPY . /app
 WORKDIR /app
-RUN pip install -r requirements.txt
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . /app
+EXPOSE 5001
 ENTRYPOINT ["python"]
 CMD ["flask_brevets.py"]
